@@ -19,6 +19,7 @@ function LobbyView() {
   const [maxPlayers, setMaxPlayers] = useState(6);
   const [smallBlind, setSmallBlind] = useState(5);
   const [bigBlind, setBigBlind] = useState(10);
+  const [buyIn, setBuyIn] = useState(1000);
 
   useEffect(() => {
     if (playerName && !playerName.startsWith('Player_')) {
@@ -53,8 +54,7 @@ function LobbyView() {
       maxPlayers,
       smallBlind,
       bigBlind,
-      minBuyIn: bigBlind * 20,
-      maxBuyIn: bigBlind * 100,
+      buyIn,
     });
   };
 
@@ -108,18 +108,18 @@ function LobbyView() {
   }
 
   return (
-    <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full p-6">
+    <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full p-3 sm:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-4 sm:mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-white">德州扑克大厅</h1>
-          <p className="text-sm text-white/40 mt-1">选择一张桌子或创建新桌</p>
+          <h1 className="text-lg sm:text-2xl font-bold text-white">德州扑克大厅</h1>
+          <p className="text-xs sm:text-sm text-white/40 mt-0.5 sm:mt-1">选择一张桌子或创建新桌</p>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-white/50">{playerName}</span>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <span className="text-xs sm:text-sm text-white/50 hidden sm:inline">{playerName}</span>
           <button
             onClick={() => setShowCreate(true)}
-            className="px-5 py-2.5 rounded-xl font-bold text-sm text-white
+            className="px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm text-white
               hover:brightness-110 active:scale-95 transition-all"
             style={{ background: 'var(--action-call)' }}
           >
@@ -155,7 +155,7 @@ function LobbyView() {
                 <div className="text-left">
                   <div className="text-white font-medium">{table.name}</div>
                   <div className="text-xs text-white/40 mt-0.5">
-                    {table.mode === 'short-deck' ? '短牌' : '常规'} · 盲注 ${table.smallBlind}/${table.bigBlind}
+                    {table.mode === 'short-deck' ? '短牌' : '常规'} · 盲注 ${table.smallBlind}/${table.bigBlind} · 买入 ${table.buyIn}
                   </div>
                 </div>
               </div>
@@ -270,9 +270,23 @@ function LobbyView() {
                 </div>
               </div>
 
-              {/* Buy-in info */}
+              {/* Buy-in */}
+              <div>
+                <label className="text-xs text-white/50 mb-1 block">买入金额</label>
+                <select
+                  value={buyIn}
+                  onChange={e => setBuyIn(Number(e.target.value))}
+                  className="w-full px-3 py-2 rounded-lg bg-black/30 border border-white/10 text-sm text-white
+                    focus:outline-none focus:border-[var(--gold)] transition-colors"
+                >
+                  {[200, 500, 1000, 2000, 5000, 10000].map(v => (
+                    <option key={v} value={v}>${v.toLocaleString()}</option>
+                  ))}
+                </select>
+              </div>
+
               <div className="text-xs text-white/30">
-                买入范围: ${bigBlind * 20} - ${bigBlind * 100}
+                每位玩家入座时自动获得 ${buyIn.toLocaleString()} 筹码
               </div>
             </div>
 

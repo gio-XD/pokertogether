@@ -77,8 +77,7 @@ export interface TableConfig {
   maxPlayers: number;
   smallBlind: number;
   bigBlind: number;
-  minBuyIn: number;
-  maxBuyIn: number;
+  buyIn: number;
 }
 
 // ===== Client-safe state (no deck, no other players' hole cards) =====
@@ -125,14 +124,12 @@ export interface CreateTablePayload {
   maxPlayers: number;
   smallBlind: number;
   bigBlind: number;
-  minBuyIn: number;
-  maxBuyIn: number;
+  buyIn: number;
 }
 
 export interface JoinTablePayload {
   tableId: string;
   seatIndex: number;
-  buyIn: number;
 }
 
 export interface ChatMessage {
@@ -150,5 +147,6 @@ export interface TableInfo {
   playerCount: number;
   smallBlind: number;
   bigBlind: number;
+  buyIn: number;
   status: 'waiting' | 'playing';
 }

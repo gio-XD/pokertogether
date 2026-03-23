@@ -86,17 +86,15 @@ export function PokerTable({ maxPlayers, tableId }: PokerTableProps) {
 
   const handleSeatClick = (seatIndex: number) => {
     if (!socket) return;
-    // Check if seat is empty
     if (gameState) {
       const occupied = gameState.players.find(p => p.seatIndex === seatIndex);
       if (occupied) return;
     }
-
-    const bigBlind = gameState?.bigBlind || 10;
+    // Fixed buy-in from table config (minBuyIn = maxBuyIn for fixed tables)
     socket.emit('table:join', {
       tableId,
       seatIndex,
-      buyIn: bigBlind * 100,
+      buyIn: 0, // server uses table's configured buyIn
     });
   };
 
@@ -202,8 +200,6 @@ export function PokerTable({ maxPlayers, tableId }: PokerTableProps) {
         <ActionBar gameState={gameState} playerId={playerId || ''} />
       )}
 
-      {/* Error display */}
-      {/* errors handled by game provider */}
     </div>
   );
 }

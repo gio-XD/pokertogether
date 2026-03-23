@@ -67,15 +67,15 @@ export function setupSocketHandlers(io: Server): void {
 
     socket.on(C2S.TABLE_CREATE, (payload: CreateTablePayload) => {
       const tableId = generateTableId();
+      const bb = payload.bigBlind || 10;
       const config = {
         id: tableId,
         name: payload.name || `Table ${tableId.slice(-4)}`,
         mode: payload.mode || 'regular',
         maxPlayers: Math.min(Math.max(payload.maxPlayers || 6, 2), 9),
         smallBlind: payload.smallBlind || 5,
-        bigBlind: payload.bigBlind || 10,
-        minBuyIn: payload.minBuyIn || payload.bigBlind * 20 || 200,
-        maxBuyIn: payload.maxBuyIn || payload.bigBlind * 100 || 1000,
+        bigBlind: bb,
+        buyIn: payload.buyIn || 1000,
       };
 
       const table = new Table(config);
@@ -159,7 +159,7 @@ export function setupSocketHandlers(io: Server): void {
         socket.join(payload.tableId);
         socketTableMap.set(socket.id, payload.tableId);
         socket.leave('lobby');
-        table.joinTable(player.id, player.name, payload.seatIndex, payload.buyIn);
+        table.joinTable(player.id, player.name, payload.seatIndex);
         // Explicitly send updated state to the joining player
         const state = table.getStateForPlayer(player.id);
         socket.emit(S2C.TABLE_STATE, state);

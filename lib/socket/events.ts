@@ -10,6 +10,7 @@ export const C2S = {
   TABLE_JOIN: 'table:join',
   TABLE_LEAVE: 'table:leave',
   TABLE_ACTION: 'table:action',
+  TABLE_REBUY: 'table:rebuy',
   TABLE_CHAT: 'table:chat',
   TABLE_SIT_OUT: 'table:sit-out',
 

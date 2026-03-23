@@ -32,7 +32,7 @@ export function ChatPanel() {
   };
 
   return (
-    <div className="w-64 bg-[var(--panel-bg)] border-l border-[var(--panel-border)] flex flex-col">
+    <div className="absolute sm:relative right-0 top-0 bottom-0 w-full sm:w-64 bg-[var(--panel-bg)] border-l border-[var(--panel-border)] flex flex-col z-40 max-w-[280px] sm:max-w-none">
       <div className="px-3 py-2 border-b border-[var(--panel-border)]">
         <span className="text-xs font-medium text-white/50">聊天</span>
       </div>

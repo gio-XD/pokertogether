@@ -82,30 +82,30 @@ function TableView({ tableId }: { tableId: string }) {
       {/* Main table area */}
       <div className="flex-1 flex flex-col">
         {/* Top bar */}
-        <div className="h-12 bg-[var(--panel-bg)] border-b border-[var(--panel-border)]
-          flex items-center justify-between px-4">
-          <div className="flex items-center gap-3">
-            <a href="/lobby" className="text-white/50 hover:text-white transition-colors text-sm">
-              ← 返回大厅
+        <div className="h-10 sm:h-12 bg-[var(--panel-bg)] border-b border-[var(--panel-border)]
+          flex items-center justify-between px-2 sm:px-4">
+          <div className="flex items-center gap-1.5 sm:gap-3">
+            <a href="/lobby" className="text-white/50 hover:text-white transition-colors text-xs sm:text-sm">
+              ← 大厅
             </a>
-            <span className="text-white/20">|</span>
-            <span className="text-sm text-white/70">
+            <span className="text-white/20 hidden sm:inline">|</span>
+            <span className="text-xs sm:text-sm text-white/70 hidden sm:inline">
               {gameState?.mode === 'short-deck' ? '短牌' : '常规'}德州
             </span>
             {gameState && (
-              <span className="text-xs text-white/40">
-                盲注 ${gameState.smallBlind}/${gameState.bigBlind}
+              <span className="text-[10px] sm:text-xs text-white/40">
+                {gameState.smallBlind}/{gameState.bigBlind}
               </span>
             )}
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-white/40">{playerName}</span>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <span className="text-[10px] sm:text-xs text-white/40 hidden sm:inline">{playerName}</span>
             <button
               onClick={() => setShowChat(!showChat)}
-              className="px-3 py-1 rounded-lg text-xs text-white/50 hover:text-white
+              className="px-2 sm:px-3 py-1 rounded-lg text-[10px] sm:text-xs text-white/50 hover:text-white
                 bg-white/5 hover:bg-white/10 transition-all"
             >
-              {showChat ? '隐藏聊天' : '聊天'}
+              {showChat ? '关闭' : '聊天'}
             </button>
           </div>
         </div>

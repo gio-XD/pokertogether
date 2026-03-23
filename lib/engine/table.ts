@@ -56,14 +56,13 @@ export class Table {
 
   // === Player Management ===
 
-  joinTable(playerId: string, name: string, seatIndex: number, buyIn: number): void {
+  joinTable(playerId: string, name: string, seatIndex: number): void {
     if (seatIndex < 0 || seatIndex >= this.config.maxPlayers) {
       throw new Error(`Invalid seat index: ${seatIndex}`);
     }
-    if (buyIn < this.config.minBuyIn || buyIn > this.config.maxBuyIn) {
-      throw new Error(`Buy-in must be between ${this.config.minBuyIn} and ${this.config.maxBuyIn}`);
-    }
 
+    // Fixed buy-in from table config
+    const buyIn = this.config.buyIn;
     this.state = addPlayer(this.state, playerId, name, seatIndex, buyIn);
     this.emit({ type: 'player-joined', state: this.state, data: { playerId, seatIndex } });
 
@@ -195,6 +194,7 @@ export class Table {
       playerCount: this.state.players.length,
       smallBlind: this.config.smallBlind,
       bigBlind: this.config.bigBlind,
+      buyIn: this.config.buyIn,
       status: this.state.phase === 'waiting' ? 'waiting' as const : 'playing' as const,
     };
   }
