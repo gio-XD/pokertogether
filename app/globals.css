@@ -1,8 +1,24 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0b0e14;
+  --foreground: #e0e0e0;
+  --table-felt: #1a5c3a;
+  --table-felt-light: #1f7a4c;
+  --table-border: #2a3a2e;
+  --table-rail: #3d2b1f;
+  --gold: #ffd700;
+  --gold-dim: #b8960f;
+  --card-white: #fafafa;
+  --red-suit: #e53e3e;
+  --action-fold: #dc2626;
+  --action-call: #16a34a;
+  --action-raise: #2563eb;
+  --panel-bg: #141820;
+  --panel-border: #1e2530;
+  --seat-bg: #1a1f2a;
+  --seat-active: #2a3040;
+  --pot-glow: #ffd70044;
 }
 
 @theme inline {
@@ -12,15 +28,100 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Card flip animation */
+.card-container {
+  perspective: 800px;
+}
+
+.card-inner {
+  transition: transform 0.4s ease;
+  transform-style: preserve-3d;
+}
+
+.card-inner.flipped {
+  transform: rotateY(180deg);
+}
+
+.card-face {
+  backface-visibility: hidden;
+}
+
+.card-back-face {
+  backface-visibility: hidden;
+  transform: rotateY(180deg);
+}
+
+/* Deal animation */
+@keyframes deal-card {
+  0% {
+    opacity: 0;
+    transform: translate(0, -100px) scale(0.5);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+}
+
+.animate-deal {
+  animation: deal-card 0.4s ease-out forwards;
+}
+
+/* Chip to pot animation */
+@keyframes chip-to-pot {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--pot-x), var(--pot-y)) scale(0.5);
+  }
+}
+
+/* Pot glow pulse */
+@keyframes pot-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px var(--pot-glow);
+  }
+  50% {
+    box-shadow: 0 0 40px var(--pot-glow);
+  }
+}
+
+.pot-glow {
+  animation: pot-glow 2s ease-in-out infinite;
+}
+
+/* Timer bar */
+@keyframes timer-shrink {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
+/* Win highlight */
+@keyframes win-pulse {
+  0%, 100% { box-shadow: 0 0 10px var(--gold); }
+  50% { box-shadow: 0 0 30px var(--gold), 0 0 60px var(--gold-dim); }
+}
+
+.animate-win {
+  animation: win-pulse 1s ease-in-out 3;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--panel-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--panel-border);
+  border-radius: 3px;
 }
