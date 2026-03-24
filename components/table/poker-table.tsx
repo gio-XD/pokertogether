@@ -140,16 +140,16 @@ export function PokerTable({ maxPlayers, tableId }: PokerTableProps) {
             </div>
           </div>
 
-          {/* Community cards — outside clip area */}
+          {/* Community cards — above seats so they're never blocked */}
           {gameState && gameState.communityCards.length > 0 && (
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30">
               <CommunityCards cards={gameState.communityCards} />
             </div>
           )}
 
           {/* Pot display */}
           {gameState && gameState.pot > 0 && (
-            <div className="absolute top-[32%] left-1/2 -translate-x-1/2 z-10">
+            <div className="absolute top-[32%] left-1/2 -translate-x-1/2 z-30">
               <PotDisplay amount={gameState.pot} />
             </div>
           )}
@@ -194,6 +194,35 @@ export function PokerTable({ maxPlayers, tableId }: PokerTableProps) {
             })}
         </div>
       </div>
+
+      {/* Ready button when waiting */}
+      {isPlayerSeated && gameState && gameState.phase === 'waiting' && (
+        <div className="bg-[var(--panel-bg)] border-t border-[var(--panel-border)] px-4 py-3 flex items-center justify-center gap-4">
+          {(() => {
+            const me = gameState.players.find(p => p.id === playerId);
+            const readyCount = gameState.players.filter(p => p.isReady).length;
+            const totalPlayers = gameState.players.length;
+            return (
+              <>
+                <span className="text-xs text-white/40">
+                  {readyCount}/{totalPlayers} 已准备
+                </span>
+                <button
+                  onClick={() => socket?.emit('table:ready')}
+                  className={`px-8 py-3 rounded-xl font-bold text-sm transition-all
+                    hover:brightness-110 active:scale-95 ${
+                      me?.isReady
+                        ? 'bg-yellow-600 text-white'
+                        : 'bg-[var(--action-call)] text-white'
+                    }`}
+                >
+                  {me?.isReady ? '取消准备' : '准备'}
+                </button>
+              </>
+            );
+          })()}
+        </div>
+      )}
 
       {/* Action bar at bottom */}
       {isPlayerSeated && gameState && gameState.phase !== 'waiting' && (

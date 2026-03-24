@@ -70,6 +70,15 @@ export class Table {
     this.tryAutoStart();
   }
 
+  toggleReady(playerId: string): void {
+    if (this.state.phase !== 'waiting') return;
+    const player = this.state.players.find(p => p.id === playerId);
+    if (!player) return;
+    player.isReady = !player.isReady;
+    this.emit({ type: 'state-update', state: this.state });
+    this.tryAutoStart();
+  }
+
   leaveTable(playerId: string): void {
     // If hand is in progress and player is in it, fold them
     if (this.state.phase !== 'waiting') {

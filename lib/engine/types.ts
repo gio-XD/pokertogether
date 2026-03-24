@@ -43,6 +43,7 @@ export interface PlayerState {
   status: PlayerStatus;
   isConnected: boolean;
   hasActed: boolean;
+  isReady: boolean;
 }
 
 export interface SidePot {

@@ -14,12 +14,17 @@ import { generateTableId, generatePlayerId } from '../utils/id';
 const socketTableMap = new Map<string, string>();
 // Track player info per socket
 const socketPlayerMap = new Map<string, { id: string; name: string }>();
+// Reverse lookup: playerId → socketId (for reconnection)
+const playerIdToSocketId = new Map<string, string>();
 
-function getOrCreatePlayer(socket: Socket): { id: string; name: string } {
+function getOrCreatePlayer(socket: Socket, requestedId?: string): { id: string; name: string } {
   let player = socketPlayerMap.get(socket.id);
   if (!player) {
-    player = { id: generatePlayerId(), name: `Player_${socket.id.slice(0, 4)}` };
+    // If client provides a previously known playerId, try to reclaim it
+    const id = requestedId || generatePlayerId();
+    player = { id, name: `Player_${socket.id.slice(0, 4)}` };
     socketPlayerMap.set(socket.id, player);
+    playerIdToSocketId.set(id, socket.id);
   }
   return player;
 }
@@ -44,19 +49,56 @@ function broadcastLobby(io: Server): void {
 
 export function setupSocketHandlers(io: Server): void {
   io.on('connection', (socket: Socket) => {
-    const player = getOrCreatePlayer(socket);
-    socket.emit(S2C.AUTH_SESSION, { playerId: player.id, playerName: player.name });
+    // Player is created lazily after auth:restore or default
+
+    let player: { id: string; name: string } | null = null;
+
+    function ensurePlayer(): { id: string; name: string } {
+      if (!player) {
+        player = getOrCreatePlayer(socket);
+      }
+      return player;
+    }
 
     // === Auth ===
+
+    // Client restores a previous playerId from localStorage
+    socket.on('auth:restore', (data: { playerId: string; playerName: string }) => {
+      const oldSocketId = playerIdToSocketId.get(data.playerId);
+      if (oldSocketId) {
+        socketPlayerMap.delete(oldSocketId);
+      }
+      player = { id: data.playerId, name: data.playerName || `Player_${socket.id.slice(0, 4)}` };
+      socketPlayerMap.set(socket.id, player);
+      playerIdToSocketId.set(data.playerId, socket.id);
+      socket.emit(S2C.AUTH_SESSION, { playerId: player.id, playerName: player.name });
+
+      // If player was at a table, reconnect them
+      for (const [, table] of lobbyManager.getAllTables()) {
+        const existing = table.state.players.find(p => p.id === data.playerId);
+        if (existing) {
+          const tableId = table.config.id;
+          socket.join(tableId);
+          socketTableMap.set(socket.id, tableId);
+          // Mark reconnected
+          existing.isConnected = true;
+          broadcastTableState(io, table);
+          break;
+        }
+      }
+    });
+
     socket.on(C2S.AUTH_SET_NAME, (name: string) => {
+      const p = ensurePlayer();
       if (typeof name === 'string' && name.trim().length > 0 && name.length <= 20) {
-        player.name = name.trim();
-        socket.emit(S2C.AUTH_SESSION, { playerId: player.id, playerName: player.name });
+        p.name = name.trim();
+        socket.emit(S2C.AUTH_SESSION, { playerId: p.id, playerName: p.name });
       }
     });
 
     // === Lobby ===
     socket.on(C2S.LOBBY_JOIN, () => {
+      ensurePlayer();
       socket.join('lobby');
       socket.emit(S2C.LOBBY_TABLE_LIST, lobbyManager.getTableList());
     });
@@ -66,6 +108,7 @@ export function setupSocketHandlers(io: Server): void {
     });
 
     socket.on(C2S.TABLE_CREATE, (payload: CreateTablePayload) => {
+      ensurePlayer();
       const tableId = generateTableId();
       const bb = payload.bigBlind || 10;
       const config = {
@@ -83,6 +126,7 @@ export function setupSocketHandlers(io: Server): void {
       // Listen for table events and broadcast
       table.on((event) => {
         switch (event.type) {
+          case 'state-update':
           case 'hand-started':
           case 'action-processed':
           case 'phase-changed':
@@ -96,7 +140,7 @@ export function setupSocketHandlers(io: Server): void {
 
           case 'hand-complete':
             io.to(tableId).emit(S2C.TABLE_HAND_COMPLETE, event.data);
-            // After a short delay, broadcast new waiting state
+            // Broadcast the post-win state after a delay
             setTimeout(() => broadcastTableState(io, table), 500);
             broadcastLobby(io);
             break;
@@ -134,6 +178,7 @@ export function setupSocketHandlers(io: Server): void {
 
     // Watch a table (join socket room as spectator, receive state)
     socket.on(C2S.TABLE_WATCH, (tableId: string) => {
+      const p = ensurePlayer();
       const table = lobbyManager.getTable(tableId);
       if (!table) {
         socket.emit(S2C.TABLE_ERROR, { message: 'Table not found' });
@@ -142,12 +187,20 @@ export function setupSocketHandlers(io: Server): void {
       socket.join(tableId);
       socketTableMap.set(socket.id, tableId);
       socket.leave('lobby');
-      // Send current state to the spectator
-      const state = table.getStateForPlayer(player.id);
-      socket.emit(S2C.TABLE_STATE, state);
+
+      // If player is already at this table (reconnection), mark connected
+      const existing = table.state.players.find(pl => pl.id === p.id);
+      if (existing) {
+        existing.isConnected = true;
+        broadcastTableState(io, table);
+      } else {
+        const state = table.getStateForPlayer(p.id);
+        socket.emit(S2C.TABLE_STATE, state);
+      }
     });
 
     socket.on(C2S.TABLE_JOIN, (payload: JoinTablePayload) => {
+      const p = ensurePlayer();
       const table = lobbyManager.getTable(payload.tableId);
       if (!table) {
         socket.emit(S2C.TABLE_ERROR, { message: 'Table not found' });
@@ -159,9 +212,9 @@ export function setupSocketHandlers(io: Server): void {
         socket.join(payload.tableId);
         socketTableMap.set(socket.id, payload.tableId);
         socket.leave('lobby');
-        table.joinTable(player.id, player.name, payload.seatIndex);
+        table.joinTable(p.id, p.name, payload.seatIndex);
         // Explicitly send updated state to the joining player
-        const state = table.getStateForPlayer(player.id);
+        const state = table.getStateForPlayer(p.id);
         socket.emit(S2C.TABLE_STATE, state);
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Failed to join table';
@@ -169,14 +222,25 @@ export function setupSocketHandlers(io: Server): void {
       }
     });
 
+    // Ready toggle
+    socket.on('table:ready', () => {
+      const p = ensurePlayer();
+      const tableId = socketTableMap.get(socket.id);
+      if (!tableId) return;
+      const table = lobbyManager.getTable(tableId);
+      if (!table) return;
+      table.toggleReady(p.id);
+    });
+
     socket.on(C2S.TABLE_LEAVE, () => {
+      const p = ensurePlayer();
       const tableId = socketTableMap.get(socket.id);
       if (!tableId) return;
 
       const table = lobbyManager.getTable(tableId);
       if (table) {
         try {
-          table.leaveTable(player.id);
+          table.leaveTable(p.id);
         } catch {
           // Player might not be at this table
         }
@@ -187,6 +251,7 @@ export function setupSocketHandlers(io: Server): void {
     });
 
     socket.on(C2S.TABLE_ACTION, (payload: TableActionPayload) => {
+      const p = ensurePlayer();
       const tableId = socketTableMap.get(socket.id);
       if (!tableId) return;
 
@@ -194,7 +259,7 @@ export function setupSocketHandlers(io: Server): void {
       if (!table) return;
 
       try {
-        table.handleAction(player.id, payload.action, payload.amount);
+        table.handleAction(p.id, payload.action, payload.amount);
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Invalid action';
         socket.emit(S2C.TABLE_ERROR, { message });
@@ -202,13 +267,14 @@ export function setupSocketHandlers(io: Server): void {
     });
 
     socket.on(C2S.TABLE_CHAT, (message: string) => {
+      const p = ensurePlayer();
       const tableId = socketTableMap.get(socket.id);
       if (!tableId) return;
       if (typeof message !== 'string' || message.trim().length === 0 || message.length > 200) return;
 
       const chatMessage: ChatMessage = {
-        playerId: player.id,
-        playerName: player.name,
+        playerId: p.id,
+        playerName: p.name,
         message: message.trim(),
         timestamp: Date.now(),
       };
@@ -218,29 +284,30 @@ export function setupSocketHandlers(io: Server): void {
 
     // === Disconnect ===
     socket.on('disconnect', () => {
+      const p = socketPlayerMap.get(socket.id);
       const tableId = socketTableMap.get(socket.id);
-      if (tableId) {
+      if (tableId && p) {
         const table = lobbyManager.getTable(tableId);
         if (table) {
-          // Mark player as disconnected, but don't remove immediately
-          const playerState = table.state.players.find(p => p.id === player.id);
+          const playerState = table.state.players.find(pl => pl.id === p.id);
           if (playerState) {
             playerState.isConnected = false;
             broadcastTableState(io, table);
 
-            // Remove after 60s if still disconnected
+            // Remove after 120s if still disconnected
             setTimeout(() => {
-              const current = table.state.players.find(p => p.id === player.id);
+              const current = table.state.players.find(pl => pl.id === p.id);
               if (current && !current.isConnected) {
-                table.leaveTable(player.id);
+                table.leaveTable(p.id);
               }
-            }, 60_000);
+            }, 120_000);
           }
         }
       }
 
       socketTableMap.delete(socket.id);
       socketPlayerMap.delete(socket.id);
+      // Don't delete from playerIdToSocketId — needed for reconnection
     });
   });
 }

@@ -53,11 +53,17 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
     s.on('connect', () => {
       setIsConnected(true);
-      // Restore saved name on reconnect
-      const saved = getSavedName();
-      if (saved) {
-        s.emit('auth:set-name', saved);
-        setPlayerNameState(saved);
+      // Restore saved identity on reconnect
+      const savedId = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY_ID) : null;
+      const savedName = getSavedName();
+      if (savedId && savedName) {
+        // Send restore event so server can reclaim the old playerId
+        s.emit('auth:restore', { playerId: savedId, playerName: savedName });
+        setPlayerId(savedId);
+        setPlayerNameState(savedName);
+      } else if (savedName) {
+        s.emit('auth:set-name', savedName);
+        setPlayerNameState(savedName);
       }
     });
 

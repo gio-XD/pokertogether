@@ -69,6 +69,7 @@ export function addPlayer(
     status: 'active',
     isConnected: true,
     hasActed: false,
+    isReady: false,
   };
 
   return { ...state, players: [...state.players, player].sort((a, b) => a.seatIndex - b.seatIndex) };
@@ -107,7 +108,10 @@ function nextSeatIndex(state: GameState, fromIndex: number, filter: (p: PlayerSt
 }
 
 export function canStartHand(state: GameState): boolean {
-  return getActivePlayers(state).length >= MIN_PLAYERS_TO_START;
+  const active = getActivePlayers(state);
+  if (active.length < MIN_PLAYERS_TO_START) return false;
+  // All active players must be ready
+  return active.every(p => p.isReady);
 }
 
 export function startNewHand(state: GameState): GameState {
@@ -119,9 +123,9 @@ export function startNewHand(state: GameState): GameState {
   // Reset players for new hand
   const players: PlayerState[] = state.players.map(p => {
     if (p.status === 'sitting-out' || p.stack <= 0) {
-      return { ...p, holeCards: null, currentBet: 0, totalBetThisHand: 0, status: 'sitting-out' as const, hasActed: false };
+      return { ...p, holeCards: null, currentBet: 0, totalBetThisHand: 0, status: 'sitting-out' as const, hasActed: false, isReady: false };
     }
-    return { ...p, holeCards: null, currentBet: 0, totalBetThisHand: 0, status: 'active' as const, hasActed: false };
+    return { ...p, holeCards: null, currentBet: 0, totalBetThisHand: 0, status: 'active' as const, hasActed: false, isReady: true };
   });
 
   // Move dealer button
@@ -574,6 +578,7 @@ export function sanitizeStateForPlayer(
     status: p.status,
     isConnected: p.isConnected,
     hasActed: p.hasActed,
+    isReady: p.isReady,
     holeCards:
       p.id === playerId
         ? p.holeCards

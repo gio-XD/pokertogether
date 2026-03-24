@@ -120,6 +120,13 @@ export function Seat({
         {!player.isConnected && (
           <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500" />
         )}
+
+        {/* Ready indicator */}
+        {gamePhase === 'waiting' && player.isReady && (
+          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded-full bg-green-500/80 text-[8px] text-white font-bold">
+            READY
+          </div>
+        )}
       </div>
 
       {/* Current bet */}
