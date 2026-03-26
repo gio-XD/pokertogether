@@ -48,6 +48,9 @@ function broadcastLobby(io: Server): void {
 }
 
 export function setupSocketHandlers(io: Server): void {
+  // Auto-broadcast lobby when an idle table is cleaned up
+  lobbyManager.setOnTableRemoved(() => broadcastLobby(io));
+
   io.on('connection', (socket: Socket) => {
     // Player is created lazily after auth:restore or default
 
@@ -82,6 +85,7 @@ export function setupSocketHandlers(io: Server): void {
           socketTableMap.set(socket.id, tableId);
           // Mark reconnected
           existing.isConnected = true;
+          lobbyManager.clearEmptyTimer(tableId);
           broadcastTableState(io, table);
           break;
         }
@@ -192,6 +196,7 @@ export function setupSocketHandlers(io: Server): void {
       const existing = table.state.players.find(pl => pl.id === p.id);
       if (existing) {
         existing.isConnected = true;
+        lobbyManager.clearEmptyTimer(tableId);
         broadcastTableState(io, table);
       } else {
         const state = table.getStateForPlayer(p.id);
@@ -301,6 +306,12 @@ export function setupSocketHandlers(io: Server): void {
                 table.leaveTable(p.id);
               }
             }, 120_000);
+
+            // If no connected players remain, start the idle room cleanup timer
+            const hasConnected = table.state.players.some(pl => pl.isConnected);
+            if (!hasConnected) {
+              lobbyManager.startEmptyTimer(tableId);
+            }
           }
         }
       }

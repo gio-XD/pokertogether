@@ -74,7 +74,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     };
 
     const onHandComplete = () => {
-      setTimeout(() => dispatch({ type: 'CLEAR_SHOWDOWN' }), 8000);
+      setTimeout(() => dispatch({ type: 'CLEAR_SHOWDOWN' }), 6000);
     };
 
     const onError = (data: { message: string }) => {

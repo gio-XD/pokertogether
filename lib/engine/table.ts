@@ -10,7 +10,7 @@ import {
   applyWinnings,
   sanitizeStateForPlayer,
 } from './game';
-import { ACTION_TIMEOUT_MS } from './constants';
+import { ACTION_TIMEOUT_MS, SHOWDOWN_DISPLAY_MS } from './constants';
 
 export type TableEventType =
   | 'state-update'
@@ -131,8 +131,11 @@ export class Table {
     this.state = applyWinnings(this.state, winners);
     this.emit({ type: 'hand-complete', state: this.state, data: { winners } });
 
-    // Auto-start next hand
-    this.tryAutoStart();
+    // Auto-start next hand after showdown display period
+    this.clearAutoStartTimer();
+    this.autoStartTimer = setTimeout(() => {
+      this.tryAutoStart();
+    }, SHOWDOWN_DISPLAY_MS);
   }
 
   // === Timers ===

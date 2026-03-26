@@ -59,3 +59,9 @@ export const RANK_DISPLAY: Record<Rank, string> = {
 export const ACTION_TIMEOUT_MS = 30_000;
 export const MIN_PLAYERS_TO_START = 2;
 export const MAX_PLAYERS = 9;
+
+/** How long to display showdown results before starting the next hand (ms) */
+export const SHOWDOWN_DISPLAY_MS = 6_000;
+
+/** Remove tables with no connected players after this duration (ms) — 30 minutes */
+export const EMPTY_TABLE_TIMEOUT_MS = 30 * 60 * 1000;
