@@ -8,6 +8,7 @@ import {
   processAction,
   determineWinners,
   applyWinnings,
+  resetAfterShowdown,
   sanitizeStateForPlayer,
 } from './game';
 import { ACTION_TIMEOUT_MS, SHOWDOWN_DISPLAY_MS } from './constants';
@@ -127,13 +128,15 @@ export class Table {
     const winners = determineWinners(this.state);
     this.emit({ type: 'showdown', state: this.state, data: { winners } });
 
-    // Apply winnings after a delay for animation
+    // Apply winnings but keep phase as 'showdown' so clients can see cards
     this.state = applyWinnings(this.state, winners);
     this.emit({ type: 'hand-complete', state: this.state, data: { winners } });
 
-    // Auto-start next hand after showdown display period
+    // After display period, reset to waiting and start next hand
     this.clearAutoStartTimer();
     this.autoStartTimer = setTimeout(() => {
+      this.state = resetAfterShowdown(this.state);
+      this.emit({ type: 'state-update', state: this.state });
       this.tryAutoStart();
     }, SHOWDOWN_DISPLAY_MS);
   }

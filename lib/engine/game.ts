@@ -548,11 +548,20 @@ export function applyWinnings(state: GameState, winners: WinnerResult[]): GameSt
   return {
     ...state,
     players,
+    // Keep phase as 'showdown' so clients can still see hole cards & community cards.
+    // Call resetAfterShowdown() when ready to start the next hand.
+    currentPlayerIndex: -1,
+  };
+}
+
+/** Reset table state after showdown display period is over. */
+export function resetAfterShowdown(state: GameState): GameState {
+  return {
+    ...state,
     phase: 'waiting',
     pot: 0,
     sidePots: [],
     communityCards: [],
-    currentPlayerIndex: -1,
   };
 }
 
