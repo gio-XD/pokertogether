@@ -227,7 +227,7 @@ export function PokerTable({ maxPlayers, tableId }: PokerTableProps) {
                   {me.isReady ? '取消准备' : '准备'}
                 </button>
                 {canRebuy && (
-                  <RebuyPanel bigBlind={gameState.bigBlind} maxRebuy={gameState.maxRebuy} />
+                  <RebuyPanel buyIn={gameState.buyIn} maxRebuy={gameState.maxRebuy} />
                 )}
                 {hasPendingRebuy && (
                   <span className="text-sm text-white/70">
@@ -250,7 +250,7 @@ export function PokerTable({ maxPlayers, tableId }: PokerTableProps) {
                 </span>
               )}
               {canRebuy && (
-                <RebuyPanel bigBlind={gameState.bigBlind} maxRebuy={gameState.maxRebuy} />
+                <RebuyPanel buyIn={gameState.buyIn} maxRebuy={gameState.maxRebuy} />
               )}
             </div>
           );

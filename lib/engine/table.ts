@@ -94,21 +94,21 @@ export class Table {
       throw new Error('只能在等待阶段或坐下时买入');
     }
 
-    const bb = this.state.bigBlind;
-    // Must be a positive whole number of big blinds
-    if (amount <= 0 || amount % bb !== 0) {
-      throw new Error(`买入必须是大盲 (${bb}) 的整数倍`);
+    const unit = this.config.buyIn;
+    // Must be a positive whole number of buy-ins
+    if (amount <= 0 || amount % unit !== 0) {
+      throw new Error(`买入必须是 ${unit} 的整数倍`);
     }
 
-    // Max = chip leader's stack (excluding self), rounded down to whole BBs
+    // Max = chip leader's stack (excluding self), rounded down to whole buy-ins
     const othersMax = Math.max(...this.state.players.filter(p => p.id !== playerId).map(p => p.stack), 0);
     const chipLeaderStack = Math.max(othersMax, player.stack);
-    const maxRebuy = Math.floor(chipLeaderStack / bb) * bb;
-    // If everyone is busted / solo, fall back to table buy-in
-    const effectiveMax = maxRebuy > 0 ? maxRebuy : this.config.buyIn;
+    const maxRebuy = Math.floor(chipLeaderStack / unit) * unit;
+    // If everyone is busted / solo, fall back to one buy-in
+    const effectiveMax = maxRebuy > 0 ? maxRebuy : unit;
 
     // The rebuy amount is the TOP-UP target, so cap at effectiveMax - current stack
-    const maxTopUp = Math.floor((effectiveMax - player.stack) / bb) * bb;
+    const maxTopUp = Math.floor((effectiveMax - player.stack) / unit) * unit;
     if (maxTopUp <= 0) {
       throw new Error('筹码已达上限');
     }
@@ -264,7 +264,7 @@ export class Table {
   // === State Access ===
 
   getStateForPlayer(playerId: string) {
-    return sanitizeStateForPlayer(this.state, playerId);
+    return sanitizeStateForPlayer(this.state, playerId, this.config.buyIn);
   }
 
   getTableInfo() {

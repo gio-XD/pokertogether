@@ -105,7 +105,8 @@ export interface ClientGameState {
   currentBet: number;
   handNumber: number;
   validActions: PlayerAction[];
-  /** Max rebuy amount = chip leader's stack, rounded down to whole big blinds */
+  buyIn: number;
+  /** Max rebuy amount = chip leader's stack, rounded down to whole buy-ins */
   maxRebuy: number;
 }
 

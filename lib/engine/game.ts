@@ -577,6 +577,7 @@ export function resetAfterShowdown(state: GameState): GameState {
 export function sanitizeStateForPlayer(
   state: GameState,
   playerId: string,
+  buyInUnit?: number,
 ): ClientGameState {
   const player = state.players.find(p => p.id === playerId);
   const validActions = player && state.currentPlayerIndex >= 0 &&
@@ -584,13 +585,13 @@ export function sanitizeStateForPlayer(
     ? getValidActionsForPlayer(state, playerId)
     : [];
 
-  // Max top-up for this player = chip leader's stack - player's current stack, in whole BBs
-  const bb = state.bigBlind;
+  // Max top-up for this player = chip leader's stack - player's current stack, in whole buy-in units
+  const unit = buyInUnit ?? state.bigBlind;
   const playerStack = player?.stack ?? 0;
   const othersMax = Math.max(...state.players.filter(p => p.id !== playerId).map(p => p.stack), 0);
   const chipLeaderStack = Math.max(othersMax, playerStack);
-  const effectiveCap = chipLeaderStack > 0 ? Math.floor(chipLeaderStack / bb) * bb : 0;
-  const maxRebuy = Math.max(Math.floor((effectiveCap - playerStack) / bb) * bb, 0);
+  const effectiveCap = chipLeaderStack > 0 ? Math.floor(chipLeaderStack / unit) * unit : 0;
+  const maxRebuy = Math.max(Math.floor((effectiveCap - playerStack) / unit) * unit, 0);
 
   const clientPlayers: ClientPlayerState[] = state.players.map(p => ({
     id: p.id,
@@ -630,6 +631,7 @@ export function sanitizeStateForPlayer(
     currentBet: state.currentBet,
     handNumber: state.handNumber,
     validActions,
+    buyIn: buyInUnit ?? state.bigBlind,
     maxRebuy,
   };
 }
