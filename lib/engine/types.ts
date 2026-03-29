@@ -44,6 +44,8 @@ export interface PlayerState {
   isConnected: boolean;
   hasActed: boolean;
   isReady: boolean;
+  /** Pending rebuy amount, applied at the start of the next hand */
+  pendingRebuy: number;
 }
 
 export interface SidePot {
@@ -103,6 +105,8 @@ export interface ClientGameState {
   currentBet: number;
   handNumber: number;
   validActions: PlayerAction[];
+  /** Max rebuy amount = chip leader's stack, rounded down to whole big blinds */
+  maxRebuy: number;
 }
 
 // ===== Winner =====

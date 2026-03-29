@@ -33,8 +33,11 @@ export interface TableEvent {
 export class Table {
   config: TableConfig;
   state: GameState;
+  /** Remember stacks of players who left so they can resume with the same chips */
+  private previousStacks = new Map<string, number>();
   private actionTimer: ReturnType<typeof setTimeout> | null = null;
   private autoStartTimer: ReturnType<typeof setTimeout> | null = null;
+  private showdownTimer: ReturnType<typeof setTimeout> | null = null;
   private eventListeners: ((event: TableEvent) => void)[] = [];
 
   constructor(config: TableConfig) {
@@ -62,12 +65,61 @@ export class Table {
       throw new Error(`Invalid seat index: ${seatIndex}`);
     }
 
-    // Fixed buy-in from table config
-    const buyIn = this.config.buyIn;
+    // Restore previous stack if the player was here before, otherwise use table buy-in
+    const buyIn = this.previousStacks.get(playerId) ?? this.config.buyIn;
+    this.previousStacks.delete(playerId);
+
     this.state = addPlayer(this.state, playerId, name, seatIndex, buyIn);
+
+    // New players joining mid-hand must wait for the next hand
+    if (this.state.phase !== 'waiting') {
+      const player = this.state.players.find(p => p.id === playerId);
+      if (player) {
+        player.status = 'sitting-out';
+      }
+    }
+
     this.emit({ type: 'player-joined', state: this.state, data: { playerId, seatIndex } });
 
     // Auto-start if enough players
+    this.tryAutoStart();
+  }
+
+  rebuy(playerId: string, amount: number): void {
+    const player = this.state.players.find(p => p.id === playerId);
+    if (!player) throw new Error('Player not at table');
+
+    // Cannot rebuy while actively in a hand
+    if (this.state.phase !== 'waiting' && player.status !== 'sitting-out') {
+      throw new Error('只能在等待阶段或坐下时买入');
+    }
+
+    const bb = this.state.bigBlind;
+    // Must be a positive whole number of big blinds
+    if (amount <= 0 || amount % bb !== 0) {
+      throw new Error(`买入必须是大盲 (${bb}) 的整数倍`);
+    }
+
+    // Max = chip leader's stack (excluding self), rounded down to whole BBs
+    const othersMax = Math.max(...this.state.players.filter(p => p.id !== playerId).map(p => p.stack), 0);
+    const chipLeaderStack = Math.max(othersMax, player.stack);
+    const maxRebuy = Math.floor(chipLeaderStack / bb) * bb;
+    // If everyone is busted / solo, fall back to table buy-in
+    const effectiveMax = maxRebuy > 0 ? maxRebuy : this.config.buyIn;
+
+    // The rebuy amount is the TOP-UP target, so cap at effectiveMax - current stack
+    const maxTopUp = Math.floor((effectiveMax - player.stack) / bb) * bb;
+    if (maxTopUp <= 0) {
+      throw new Error('筹码已达上限');
+    }
+
+    if (amount > maxTopUp) {
+      throw new Error(`买入不能超过 ${maxTopUp}`);
+    }
+
+    player.pendingRebuy = amount;
+    player.isReady = true;
+    this.emit({ type: 'state-update', state: this.state });
     this.tryAutoStart();
   }
 
@@ -81,6 +133,12 @@ export class Table {
   }
 
   leaveTable(playerId: string): void {
+    // Remember the player's stack so they can resume later
+    const leaving = this.state.players.find(p => p.id === playerId);
+    if (leaving && leaving.stack > 0) {
+      this.previousStacks.set(playerId, leaving.stack);
+    }
+
     // If hand is in progress and player is in it, fold them
     if (this.state.phase !== 'waiting') {
       const playerIndex = this.state.players.findIndex(p => p.id === playerId);
@@ -132,9 +190,11 @@ export class Table {
     this.state = applyWinnings(this.state, winners);
     this.emit({ type: 'hand-complete', state: this.state, data: { winners } });
 
-    // After display period, reset to waiting and start next hand
-    this.clearAutoStartTimer();
-    this.autoStartTimer = setTimeout(() => {
+    // After display period, reset to waiting and start next hand.
+    // Use a dedicated timer so tryAutoStart() cannot accidentally clear it.
+    this.clearShowdownTimer();
+    this.showdownTimer = setTimeout(() => {
+      this.showdownTimer = null;
       this.state = resetAfterShowdown(this.state);
       this.emit({ type: 'state-update', state: this.state });
       this.tryAutoStart();
@@ -194,6 +254,13 @@ export class Table {
     }
   }
 
+  private clearShowdownTimer(): void {
+    if (this.showdownTimer) {
+      clearTimeout(this.showdownTimer);
+      this.showdownTimer = null;
+    }
+  }
+
   // === State Access ===
 
   getStateForPlayer(playerId: string) {
@@ -217,6 +284,7 @@ export class Table {
   destroy(): void {
     this.clearActionTimer();
     this.clearAutoStartTimer();
+    this.clearShowdownTimer();
     this.eventListeners = [];
   }
 }

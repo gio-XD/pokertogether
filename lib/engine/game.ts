@@ -70,6 +70,7 @@ export function addPlayer(
     isConnected: true,
     hasActed: false,
     isReady: false,
+    pendingRebuy: 0,
   };
 
   return { ...state, players: [...state.players, player].sort((a, b) => a.seatIndex - b.seatIndex) };
@@ -83,7 +84,7 @@ export function removePlayer(state: GameState, playerId: string): GameState {
 
 function getActivePlayers(state: GameState): PlayerState[] {
   return state.players.filter(
-    p => p.status !== 'sitting-out' && p.stack > 0
+    p => (p.status !== 'sitting-out' && p.stack > 0) || p.pendingRebuy > 0
   );
 }
 
@@ -120,12 +121,18 @@ export function startNewHand(state: GameState): GameState {
     throw new Error('Not enough players to start');
   }
 
-  // Reset players for new hand
+  // Apply pending rebuys, then reset players for new hand
   const players: PlayerState[] = state.players.map(p => {
-    if (p.status === 'sitting-out' || p.stack <= 0) {
-      return { ...p, holeCards: null, currentBet: 0, totalBetThisHand: 0, status: 'sitting-out' as const, hasActed: false, isReady: false };
+    const stack = p.stack + p.pendingRebuy;
+    const rebuyApplied = { ...p, stack, pendingRebuy: 0 };
+    if (rebuyApplied.status === 'sitting-out' && stack > 0) {
+      // Player rebuyed — bring them back in
+      return { ...rebuyApplied, holeCards: null, currentBet: 0, totalBetThisHand: 0, status: 'active' as const, hasActed: false, isReady: true };
     }
-    return { ...p, holeCards: null, currentBet: 0, totalBetThisHand: 0, status: 'active' as const, hasActed: false, isReady: true };
+    if (rebuyApplied.status === 'sitting-out' || stack <= 0) {
+      return { ...rebuyApplied, holeCards: null, currentBet: 0, totalBetThisHand: 0, status: 'sitting-out' as const, hasActed: false, isReady: false };
+    }
+    return { ...rebuyApplied, holeCards: null, currentBet: 0, totalBetThisHand: 0, status: 'active' as const, hasActed: false, isReady: true };
   });
 
   // Move dealer button
@@ -577,6 +584,14 @@ export function sanitizeStateForPlayer(
     ? getValidActionsForPlayer(state, playerId)
     : [];
 
+  // Max top-up for this player = chip leader's stack - player's current stack, in whole BBs
+  const bb = state.bigBlind;
+  const playerStack = player?.stack ?? 0;
+  const othersMax = Math.max(...state.players.filter(p => p.id !== playerId).map(p => p.stack), 0);
+  const chipLeaderStack = Math.max(othersMax, playerStack);
+  const effectiveCap = chipLeaderStack > 0 ? Math.floor(chipLeaderStack / bb) * bb : 0;
+  const maxRebuy = Math.max(Math.floor((effectiveCap - playerStack) / bb) * bb, 0);
+
   const clientPlayers: ClientPlayerState[] = state.players.map(p => ({
     id: p.id,
     name: p.name,
@@ -588,6 +603,7 @@ export function sanitizeStateForPlayer(
     isConnected: p.isConnected,
     hasActed: p.hasActed,
     isReady: p.isReady,
+    pendingRebuy: p.pendingRebuy,
     holeCards:
       p.id === playerId
         ? p.holeCards
@@ -614,6 +630,7 @@ export function sanitizeStateForPlayer(
     currentBet: state.currentBet,
     handNumber: state.handNumber,
     validActions,
+    maxRebuy,
   };
 }
 

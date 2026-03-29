@@ -7,6 +7,7 @@ import { CommunityCards } from './community-cards';
 import { PotDisplay } from './pot-display';
 import { DealerButton } from './dealer-button';
 import { ActionBar } from '@/components/controls/action-bar';
+import { RebuyPanel } from '@/components/controls/rebuy-panel';
 
 // Seat positions around the oval table (percentage based)
 // Optimized for up to 9 players, GGPoker-style layout
@@ -195,15 +196,22 @@ export function PokerTable({ maxPlayers, tableId }: PokerTableProps) {
         </div>
       </div>
 
-      {/* Ready button when waiting */}
-      {isPlayerSeated && gameState && gameState.phase === 'waiting' && (
-        <div className="bg-[var(--panel-bg)] border-t border-[var(--panel-border)] px-4 py-3 flex items-center justify-center gap-4">
-          {(() => {
-            const me = gameState.players.find(p => p.id === playerId);
-            const readyCount = gameState.players.filter(p => p.isReady).length;
-            const totalPlayers = gameState.players.length;
-            return (
-              <>
+      {/* Bottom panel */}
+      {isPlayerSeated && gameState && (() => {
+        const me = gameState.players.find(p => p.id === playerId);
+        if (!me) return null;
+
+        const canRebuy = gameState.maxRebuy > 0 && me.pendingRebuy === 0
+          && (gameState.phase === 'waiting' || me.status === 'sitting-out');
+        const hasPendingRebuy = me.pendingRebuy > 0;
+
+        // Waiting phase: ready button + optional rebuy
+        if (gameState.phase === 'waiting') {
+          const readyCount = gameState.players.filter(p => p.isReady).length;
+          const totalPlayers = gameState.players.length;
+          return (
+            <div className="bg-[var(--panel-bg)] border-t border-[var(--panel-border)] px-4 py-3 flex flex-col items-center gap-2">
+              <div className="flex items-center justify-center gap-4">
                 <span className="text-xs text-white/40">
                   {readyCount}/{totalPlayers} 已准备
                 </span>
@@ -211,23 +219,46 @@ export function PokerTable({ maxPlayers, tableId }: PokerTableProps) {
                   onClick={() => socket?.emit('table:ready')}
                   className={`px-8 py-3 rounded-xl font-bold text-sm transition-all
                     hover:brightness-110 active:scale-95 ${
-                      me?.isReady
+                      me.isReady
                         ? 'bg-yellow-600 text-white'
                         : 'bg-[var(--action-call)] text-white'
                     }`}
                 >
-                  {me?.isReady ? '取消准备' : '准备'}
+                  {me.isReady ? '取消准备' : '准备'}
                 </button>
-              </>
-            );
-          })()}
-        </div>
-      )}
+                {canRebuy && (
+                  <RebuyPanel bigBlind={gameState.bigBlind} maxRebuy={gameState.maxRebuy} />
+                )}
+                {hasPendingRebuy && (
+                  <span className="text-sm text-white/70">
+                    已申请买入 <span className="text-[var(--gold)] font-bold">{me.pendingRebuy}</span>，下一局生效
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        }
 
-      {/* Action bar at bottom */}
-      {isPlayerSeated && gameState && gameState.phase !== 'waiting' && (
-        <ActionBar gameState={gameState} playerId={playerId || ''} />
-      )}
+        // Mid-hand, sitting out (busted or new joiner): show rebuy or pending
+        if (me.status === 'sitting-out') {
+          return (
+            <div className="bg-[var(--panel-bg)] border-t border-[var(--panel-border)] px-4 py-3 flex items-center justify-center gap-3">
+              <span className="text-sm text-white/40">等待下一局</span>
+              {hasPendingRebuy && (
+                <span className="text-sm text-white/70">
+                  已申请买入 <span className="text-[var(--gold)] font-bold">{me.pendingRebuy}</span>，下一局生效
+                </span>
+              )}
+              {canRebuy && (
+                <RebuyPanel bigBlind={gameState.bigBlind} maxRebuy={gameState.maxRebuy} />
+              )}
+            </div>
+          );
+        }
+
+        // Active in hand: action bar
+        return <ActionBar gameState={gameState} playerId={playerId || ''} />;
+      })()}
 
     </div>
   );

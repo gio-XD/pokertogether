@@ -207,8 +207,8 @@ describe('Game State Machine', () => {
 describe('Side Pots', () => {
   it('creates single pot when no all-in', () => {
     const players: PlayerState[] = [
-      { id: 'p1', name: 'A', seatIndex: 0, stack: 900, holeCards: null, currentBet: 0, totalBetThisHand: 100, status: 'active', isConnected: true, hasActed: true, isReady: false },
-      { id: 'p2', name: 'B', seatIndex: 1, stack: 900, holeCards: null, currentBet: 0, totalBetThisHand: 100, status: 'active', isConnected: true, hasActed: true, isReady: false },
+      { id: 'p1', name: 'A', seatIndex: 0, stack: 900, holeCards: null, currentBet: 0, totalBetThisHand: 100, status: 'active', isConnected: true, hasActed: true, isReady: false, pendingRebuy: 0 },
+      { id: 'p2', name: 'B', seatIndex: 1, stack: 900, holeCards: null, currentBet: 0, totalBetThisHand: 100, status: 'active', isConnected: true, hasActed: true, isReady: false, pendingRebuy: 0 },
     ];
 
     const pots = calculateSidePots(players);
@@ -220,9 +220,9 @@ describe('Side Pots', () => {
 
   it('creates side pot with all-in player', () => {
     const players: PlayerState[] = [
-      { id: 'p1', name: 'A', seatIndex: 0, stack: 0, holeCards: null, currentBet: 0, totalBetThisHand: 50, status: 'all-in', isConnected: true, hasActed: true, isReady: false },
-      { id: 'p2', name: 'B', seatIndex: 1, stack: 850, holeCards: null, currentBet: 0, totalBetThisHand: 100, status: 'active', isConnected: true, hasActed: true, isReady: false },
-      { id: 'p3', name: 'C', seatIndex: 2, stack: 850, holeCards: null, currentBet: 0, totalBetThisHand: 100, status: 'active', isConnected: true, hasActed: true, isReady: false },
+      { id: 'p1', name: 'A', seatIndex: 0, stack: 0, holeCards: null, currentBet: 0, totalBetThisHand: 50, status: 'all-in', isConnected: true, hasActed: true, isReady: false, pendingRebuy: 0 },
+      { id: 'p2', name: 'B', seatIndex: 1, stack: 850, holeCards: null, currentBet: 0, totalBetThisHand: 100, status: 'active', isConnected: true, hasActed: true, isReady: false, pendingRebuy: 0 },
+      { id: 'p3', name: 'C', seatIndex: 2, stack: 850, holeCards: null, currentBet: 0, totalBetThisHand: 100, status: 'active', isConnected: true, hasActed: true, isReady: false, pendingRebuy: 0 },
     ];
 
     const pots = calculateSidePots(players);
@@ -240,9 +240,9 @@ describe('Side Pots', () => {
 
   it('handles folded player in side pot correctly', () => {
     const players: PlayerState[] = [
-      { id: 'p1', name: 'A', seatIndex: 0, stack: 0, holeCards: null, currentBet: 0, totalBetThisHand: 50, status: 'all-in', isConnected: true, hasActed: true, isReady: false },
-      { id: 'p2', name: 'B', seatIndex: 1, stack: 850, holeCards: null, currentBet: 0, totalBetThisHand: 100, status: 'folded', isConnected: true, hasActed: true, isReady: false },
-      { id: 'p3', name: 'C', seatIndex: 2, stack: 850, holeCards: null, currentBet: 0, totalBetThisHand: 100, status: 'active', isConnected: true, hasActed: true, isReady: false },
+      { id: 'p1', name: 'A', seatIndex: 0, stack: 0, holeCards: null, currentBet: 0, totalBetThisHand: 50, status: 'all-in', isConnected: true, hasActed: true, isReady: false, pendingRebuy: 0 },
+      { id: 'p2', name: 'B', seatIndex: 1, stack: 850, holeCards: null, currentBet: 0, totalBetThisHand: 100, status: 'folded', isConnected: true, hasActed: true, isReady: false, pendingRebuy: 0 },
+      { id: 'p3', name: 'C', seatIndex: 2, stack: 850, holeCards: null, currentBet: 0, totalBetThisHand: 100, status: 'active', isConnected: true, hasActed: true, isReady: false, pendingRebuy: 0 },
     ];
 
     const pots = calculateSidePots(players);

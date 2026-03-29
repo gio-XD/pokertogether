@@ -188,6 +188,13 @@ export function setupSocketHandlers(io: Server): void {
         socket.emit(S2C.TABLE_ERROR, { message: 'Table not found' });
         return;
       }
+
+      // Leave previous table room if any
+      const prevTableId = socketTableMap.get(socket.id);
+      if (prevTableId && prevTableId !== tableId) {
+        socket.leave(prevTableId);
+      }
+
       socket.join(tableId);
       socketTableMap.set(socket.id, tableId);
       socket.leave('lobby');
@@ -213,6 +220,11 @@ export function setupSocketHandlers(io: Server): void {
       }
 
       try {
+        // Leave previous table room if any
+        const prevTableId = socketTableMap.get(socket.id);
+        if (prevTableId && prevTableId !== payload.tableId) {
+          socket.leave(prevTableId);
+        }
         // Ensure socket is in the room before joinTable triggers broadcast
         socket.join(payload.tableId);
         socketTableMap.set(socket.id, payload.tableId);
@@ -223,6 +235,21 @@ export function setupSocketHandlers(io: Server): void {
         socket.emit(S2C.TABLE_STATE, state);
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Failed to join table';
+        socket.emit(S2C.TABLE_ERROR, { message });
+      }
+    });
+
+    // Rebuy
+    socket.on(C2S.TABLE_REBUY, (payload: { amount: number }) => {
+      const p = ensurePlayer();
+      const tableId = socketTableMap.get(socket.id);
+      if (!tableId) return;
+      const table = lobbyManager.getTable(tableId);
+      if (!table) return;
+      try {
+        table.rebuy(p.id, payload.amount);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Rebuy failed';
         socket.emit(S2C.TABLE_ERROR, { message });
       }
     });
