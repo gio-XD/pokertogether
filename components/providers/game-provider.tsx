@@ -53,8 +53,8 @@ function gameReducer(state: GameReducerState, action: GameAction): GameReducerSt
   }
 }
 
-export function GameProvider({ children }: { children: React.ReactNode }) {
-  const { socket } = useSocket();
+export function GameProvider({ tableId, children }: { tableId: string; children: React.ReactNode }) {
+  const { socket, isConnected } = useSocket();
   const [state, dispatch] = useReducer(gameReducer, {
     gameState: null,
     winners: null,
@@ -62,6 +62,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     error: null,
   });
 
+  // Register listeners first (runs before child effects in React)
   useEffect(() => {
     if (!socket) return;
 
@@ -94,6 +95,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       socket.off('table:error', onError);
     };
   }, [socket]);
+
+  // Request table state after listeners are ready — guarantees we don't miss the response
+  useEffect(() => {
+    if (socket && isConnected && tableId) {
+      socket.emit('table:watch', tableId);
+    }
+  }, [socket, isConnected, tableId]);
 
   const sendAction = useCallback((action: string, amount?: number) => {
     socket?.emit('table:action', { action, amount });

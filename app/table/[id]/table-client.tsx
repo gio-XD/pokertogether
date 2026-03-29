@@ -13,13 +13,6 @@ function TableView({ tableId }: { tableId: string }) {
   const [nameInput, setNameInput] = useState('');
   const [hasSetName, setHasSetName] = useState(false);
 
-  // Join table room as spectator on mount
-  useEffect(() => {
-    if (socket && isConnected && hasSetName) {
-      socket.emit('table:watch', tableId);
-    }
-  }, [socket, isConnected, hasSetName, tableId]);
-
   // If player hasn't set a name yet, show name input
   useEffect(() => {
     if (playerName && playerName.startsWith('Player_')) {
@@ -136,7 +129,7 @@ function TableView({ tableId }: { tableId: string }) {
 export function TableClient({ tableId }: { tableId: string }) {
   return (
     <SocketProvider>
-      <GameProvider>
+      <GameProvider tableId={tableId}>
         <div className="h-screen flex flex-col bg-[var(--background)]">
           <TableView tableId={tableId} />
         </div>
