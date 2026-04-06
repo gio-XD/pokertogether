@@ -92,12 +92,22 @@ export function Seat({
           </div>
         )}
 
-        {/* Name */}
+        {/* Name + P&L */}
         <div className="px-2 pt-2 pb-0.5">
           <div className="text-[9px] sm:text-[11px] font-medium text-center truncate text-white/90">
             {player.name}
             {isHero && <span className="text-[var(--gold)] ml-0.5">*</span>}
           </div>
+          {player.totalInvested > 0 && (() => {
+            const profit = player.stack - player.totalInvested;
+            return (
+              <div className={`text-[8px] sm:text-[9px] text-center font-medium ${
+                profit > 0 ? 'text-green-400' : profit < 0 ? 'text-red-400' : 'text-white/40'
+              }`}>
+                {profit > 0 ? '+' : ''}{profit.toLocaleString()}
+              </div>
+            );
+          })()}
         </div>
 
         {/* Stack */}

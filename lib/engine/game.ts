@@ -71,6 +71,7 @@ export function addPlayer(
     hasActed: false,
     isReady: false,
     pendingRebuy: 0,
+    totalInvested: buyIn,
   };
 
   return { ...state, players: [...state.players, player].sort((a, b) => a.seatIndex - b.seatIndex) };
@@ -124,7 +125,8 @@ export function startNewHand(state: GameState): GameState {
   // Apply pending rebuys, then reset players for new hand
   const players: PlayerState[] = state.players.map(p => {
     const stack = p.stack + p.pendingRebuy;
-    const rebuyApplied = { ...p, stack, pendingRebuy: 0 };
+    const totalInvested = p.totalInvested + p.pendingRebuy;
+    const rebuyApplied = { ...p, stack, totalInvested, pendingRebuy: 0 };
     if (rebuyApplied.status === 'sitting-out' && stack > 0) {
       // Player rebuyed — bring them back in
       return { ...rebuyApplied, holeCards: null, currentBet: 0, totalBetThisHand: 0, status: 'active' as const, hasActed: false, isReady: true };
@@ -605,6 +607,7 @@ export function sanitizeStateForPlayer(
     hasActed: p.hasActed,
     isReady: p.isReady,
     pendingRebuy: p.pendingRebuy,
+    totalInvested: p.totalInvested,
     holeCards:
       p.id === playerId
         ? p.holeCards

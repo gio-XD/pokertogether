@@ -34,7 +34,7 @@ export class Table {
   config: TableConfig;
   state: GameState;
   /** Remember stacks of players who left so they can resume with the same chips */
-  private previousStacks = new Map<string, number>();
+  private previousStacks = new Map<string, { stack: number; totalInvested: number }>();
   private actionTimer: ReturnType<typeof setTimeout> | null = null;
   private autoStartTimer: ReturnType<typeof setTimeout> | null = null;
   private showdownTimer: ReturnType<typeof setTimeout> | null = null;
@@ -66,10 +66,17 @@ export class Table {
     }
 
     // Restore previous stack if the player was here before, otherwise use table buy-in
-    const buyIn = this.previousStacks.get(playerId) ?? this.config.buyIn;
+    const prev = this.previousStacks.get(playerId);
+    const buyIn = prev?.stack ?? this.config.buyIn;
     this.previousStacks.delete(playerId);
 
     this.state = addPlayer(this.state, playerId, name, seatIndex, buyIn);
+
+    // Restore totalInvested if returning player
+    if (prev) {
+      const player = this.state.players.find(p => p.id === playerId);
+      if (player) player.totalInvested = prev.totalInvested;
+    }
 
     // New players joining mid-hand must wait for the next hand
     if (this.state.phase !== 'waiting') {
@@ -133,10 +140,10 @@ export class Table {
   }
 
   leaveTable(playerId: string): void {
-    // Remember the player's stack so they can resume later
+    // Remember the player's stack and investment so they can resume later
     const leaving = this.state.players.find(p => p.id === playerId);
     if (leaving && leaving.stack > 0) {
-      this.previousStacks.set(playerId, leaving.stack);
+      this.previousStacks.set(playerId, { stack: leaving.stack, totalInvested: leaving.totalInvested });
     }
 
     // If hand is in progress and player is in it, fold them

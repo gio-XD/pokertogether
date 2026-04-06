@@ -46,6 +46,8 @@ export interface PlayerState {
   isReady: boolean;
   /** Pending rebuy amount, applied at the start of the next hand */
   pendingRebuy: number;
+  /** Total chips invested (initial buy-in + all rebuys) for P&L tracking */
+  totalInvested: number;
 }
 
 export interface SidePot {
